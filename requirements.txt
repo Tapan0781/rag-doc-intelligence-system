@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+langchain
+pydantic
+python-dotenv
+sentence-transformers
+pinecone-client
+redis
+streamlit
+pytest
+tqdm
+pypdf
+scikit-learn
+numpy
+pandaspydantic-settings
+pinecone
