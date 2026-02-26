@@ -6,6 +6,7 @@ from typing import Iterable
 import requests
 
 from ...core.config import settings
+from ...core.errors import AppError
 
 
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
@@ -36,7 +37,7 @@ def _build_messages(question: str, contexts: Iterable[str]) -> list[dict[str, st
 
 def generate_answer(question: str, contexts: Iterable[str]) -> str:
     if not settings.openai_api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set.")
+        raise AppError("OPENAI_API_KEY is not set.", status_code=500, error_code="config_error")
 
     messages = _build_messages(question, contexts)
     payload = {
@@ -58,8 +59,10 @@ def generate_answer(question: str, contexts: Iterable[str]) -> str:
         timeout=60,
     )
     if response.status_code != 200:
-        raise RuntimeError(
-            f"OpenAI API error {response.status_code}: {response.text}"
+        raise AppError(
+            f"OpenAI API error {response.status_code}: {response.text}",
+            status_code=502,
+            error_code="upstream_error",
         )
 
     data = response.json()

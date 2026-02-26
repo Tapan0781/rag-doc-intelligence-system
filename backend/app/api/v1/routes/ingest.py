@@ -6,6 +6,7 @@ import uuid
 from fastapi import APIRouter, UploadFile
 
 from ...schemas.ingest import IngestResponse
+from ....core.errors import AppError
 from ....services.embed.fastembed import embed_texts
 from ....services.ingest.chunker import chunk_text
 from ....services.ingest.document_store import save_document_metadata
@@ -17,6 +18,8 @@ router = APIRouter()
 
 @router.post("/ingest", response_model=IngestResponse)
 async def ingest_pdf(file: UploadFile) -> IngestResponse:
+    if file.content_type != "application/pdf":
+        raise AppError("Only PDF files are supported.", status_code=415, error_code="unsupported_media_type")
     document_id = str(uuid.uuid4())
     raw_text, file_bytes, page_count = await load_pdf_text(file)
     checksum_sha256 = hashlib.sha256(file_bytes).hexdigest()
