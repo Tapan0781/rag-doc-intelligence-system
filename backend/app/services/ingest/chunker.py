@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import deque
 
-from ....core.config import Chunk, settings
+from ...core.config import Chunk, settings
 
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")

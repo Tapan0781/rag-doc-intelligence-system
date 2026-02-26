@@ -5,7 +5,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppSettings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # App
     app_name: str = "rag-doc-intelligence-system"
@@ -13,8 +17,8 @@ class AppSettings(BaseSettings):
     log_level: str = "INFO"
 
     # Pinecone
-    pinecone_api_key: str
-    pinecone_index_name: str
+    pinecone_api_key: str | None = None
+    pinecone_index_name: str | None = None
     pinecone_host: str | None = None
 
     # Redis
