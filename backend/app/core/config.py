@@ -33,6 +33,11 @@ class AppSettings(BaseSettings):
     llm_temperature: float = 0.2
     llm_max_output_tokens: int = 512
 
+    # API Auth + Rate Limit
+    api_key: str | None = None
+    rate_limit_requests: int = 60
+    rate_limit_window_seconds: int = 60
+
     # Chunking
     chunk_size: int = 800
     chunk_overlap: int = 120

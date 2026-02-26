@@ -1,17 +1,23 @@
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from .api.v1.routes.ingest import router as ingest_router
 from .api.v1.routes.query import router as query_router
 from .core.errors import AppError
 from .core.logging import configure_logging
+from .core.rate_limit import enforce_rate_limit
+from .core.security import require_api_key
 
 
 def create_app() -> FastAPI:
     configure_logging()
-    app = FastAPI(title="RAG Doc Intelligence", version="1.0.0")
+    app = FastAPI(
+        title="RAG Doc Intelligence",
+        version="1.0.0",
+        dependencies=[Depends(require_api_key)],
+    )
 
     @app.exception_handler(AppError)
     async def app_error_handler(_: Request, exc: AppError) -> JSONResponse:
@@ -19,6 +25,11 @@ def create_app() -> FastAPI:
             status_code=exc.status_code,
             content={"error": exc.error_code, "message": exc.message},
         )
+
+    @app.middleware("http")
+    async def rate_limit_middleware(request: Request, call_next):
+        enforce_rate_limit(request)
+        return await call_next(request)
 
     @app.exception_handler(Exception)
     async def unhandled_error_handler(_: Request, exc: Exception) -> JSONResponse:
