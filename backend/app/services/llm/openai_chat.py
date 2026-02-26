@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Iterable
+from typing import Iterable, Tuple
 
 import requests
 
@@ -12,21 +12,25 @@ from ...core.errors import AppError
 OPENAI_API_URL = "https://api.openai.com/v1/chat/completions"
 
 
-def _build_messages(question: str, contexts: Iterable[str]) -> list[dict[str, str]]:
+def _build_messages(
+    question: str,
+    contexts: Iterable[Tuple[str, str]],
+) -> list[dict[str, str]]:
     context_block = "\n\n".join(
-        f"[{i + 1}] {chunk}" for i, chunk in enumerate(contexts)
+        f"[{source_id}] {chunk}" for source_id, chunk in contexts
     )
 
     developer_prompt = (
         "You are a careful assistant for a RAG system. "
-        "Answer the question using ONLY the provided context. "
-        "If the answer is not in the context, say you do not know."
+        "Answer using ONLY the provided context. "
+        "If the answer is not in the context, say you do not know. "
+        "Cite sources inline using [source_id] where source_id matches the provided context label."
     )
 
     user_prompt = (
         f"Context:\n{context_block}\n\n"
         f"Question: {question}\n\n"
-        "Answer:"
+        "Answer with citations:"
     )
 
     return [
@@ -35,7 +39,7 @@ def _build_messages(question: str, contexts: Iterable[str]) -> list[dict[str, st
     ]
 
 
-def generate_answer(question: str, contexts: Iterable[str]) -> str:
+def generate_answer(question: str, contexts: Iterable[Tuple[str, str]]) -> str:
     if not settings.openai_api_key:
         raise AppError("OPENAI_API_KEY is not set.", status_code=500, error_code="config_error")
 

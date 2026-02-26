@@ -11,3 +11,4 @@ class QueryRequest(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     sources: list[str]
+    source_ids: list[str] | None = None

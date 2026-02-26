@@ -6,20 +6,26 @@ from ...services.retrieve.pinecone import query_similar
 from ...core.config import settings
 
 
-def answer_question(question: str, top_k: int | None = None) -> tuple[str, list[str]]:
+def answer_question(question: str, top_k: int | None = None) -> tuple[str, list[str], list[str]]:
     cache_key = f"rag:query:{question.strip().lower()}:{top_k or settings.max_query_results}"
     cached = get_cache(cache_key)
     if cached:
-        return cached, []
+        return cached, [], []
 
     contexts = query_similar(question, top_k=top_k)
-    sources = [c.get("text", "") for c in contexts if c.get("text")]
+    source_texts = [c.get("text", "") for c in contexts if c.get("text")]
+    source_ids = [c.get("id") or f"{c.get('document_id','doc')}:{c.get('chunk_id','?')}" for c in contexts]
+    paired_contexts = [
+        (source_ids[i], source_texts[i])
+        for i in range(min(len(source_ids), len(source_texts)))
+        if source_texts[i]
+    ]
 
     answer = (
-        generate_answer(question, sources)
-        if sources
+        generate_answer(question, paired_contexts)
+        if paired_contexts
         else "No relevant context found."
     )
 
     set_cache(cache_key, answer)
-    return answer, sources
+    return answer, source_texts, source_ids

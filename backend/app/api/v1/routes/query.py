@@ -15,5 +15,5 @@ async def query_rag(request: QueryRequest) -> QueryResponse:
     if not request.question.strip():
         raise AppError("Question must not be empty.", status_code=400, error_code="validation_error")
     inc("query_requests")
-    answer, sources = answer_question(request.question, request.top_k)
-    return QueryResponse(answer=answer, sources=sources)
+    answer, sources, source_ids = answer_question(request.question, request.top_k)
+    return QueryResponse(answer=answer, sources=sources, source_ids=source_ids)

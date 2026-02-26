@@ -24,4 +24,11 @@ def query_similar(text: str, top_k: int | None = None) -> list[dict]:
     vector = embed_texts([text])[0]
     results = index.query(vector=vector, top_k=top_k, include_metadata=True)
     matches = results.get("matches", [])
-    return [m["metadata"] for m in matches if "metadata" in m]
+    return [
+        {
+            "id": m.get("id"),
+            **(m.get("metadata") or {}),
+        }
+        for m in matches
+        if "metadata" in m
+    ]
