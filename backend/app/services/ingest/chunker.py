@@ -16,7 +16,11 @@ def _split_sentences(text: str) -> list[str]:
     return [s.strip() for s in _SENTENCE_SPLIT.split(text) if s.strip()]
 
 
-def chunk_text(text: str, document_id: str) -> list[Chunk]:
+def chunk_text(
+    text: str,
+    document_id: str,
+    extra_metadata: dict[str, str] | None = None,
+) -> list[Chunk]:
     size = settings.chunk_size
     overlap = settings.chunk_overlap
 
@@ -39,11 +43,14 @@ def chunk_text(text: str, document_id: str) -> list[Chunk]:
             current.clear()
             current_len = 0
             return
+        metadata = {"document_id": document_id, "chunk_id": str(idx)}
+        if extra_metadata:
+            metadata.update(extra_metadata)
         chunks.append(
             Chunk(
                 id=f"{document_id}:{idx}",
                 text=chunk_text_value,
-                metadata={"document_id": document_id, "chunk_id": str(idx)},
+                metadata=metadata,
             )
         )
         idx += 1

@@ -15,7 +15,9 @@ def _extract_text(reader: PdfReader) -> str:
     return "\n".join(parts)
 
 
-async def load_pdf_text(file: UploadFile) -> str:
+async def load_pdf_text(file: UploadFile) -> tuple[str, bytes, int]:
     data = await file.read()
     reader = PdfReader(BytesIO(data))
-    return _extract_text(reader)
+    text = _extract_text(reader)
+    page_count = len(reader.pages)
+    return text, data, page_count
