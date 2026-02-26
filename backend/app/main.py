@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import time
+
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from .api.v1.routes.health import router as health_router
 from .api.v1.routes.ingest import router as ingest_router
 from .api.v1.routes.query import router as query_router
 from .core.errors import AppError
-from .core.logging import configure_logging
+from .core.logging import configure_logging, log_request, request_id
 from .core.rate_limit import enforce_rate_limit
 from .core.security import require_api_key
 
@@ -31,6 +34,16 @@ def create_app() -> FastAPI:
         enforce_rate_limit(request)
         return await call_next(request)
 
+    @app.middleware("http")
+    async def access_log_middleware(request: Request, call_next):
+        start = time.perf_counter()
+        rid = request_id()
+        response = await call_next(request)
+        duration_ms = (time.perf_counter() - start) * 1000
+        response.headers["X-Request-Id"] = rid
+        log_request(request, response.status_code, duration_ms, rid)
+        return response
+
     @app.exception_handler(Exception)
     async def unhandled_error_handler(_: Request, exc: Exception) -> JSONResponse:
         return JSONResponse(
@@ -38,6 +51,7 @@ def create_app() -> FastAPI:
             content={"error": "internal_error", "message": str(exc)},
         )
 
+    app.include_router(health_router, prefix="/api/v1", tags=["health"])
     app.include_router(ingest_router, prefix="/api/v1", tags=["ingest"])
     app.include_router(query_router, prefix="/api/v1", tags=["query"])
 
