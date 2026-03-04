@@ -35,3 +35,6 @@ include = ["backend*"]
 testpaths = ["backend/tests"]
 addopts = "-q"
 pythonpath = ["."]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<3.13"
