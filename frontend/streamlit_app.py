@@ -2,13 +2,19 @@ from __future__ import annotations
 
 import os
 
+import os
 import socket
 import threading
 import time
+import sys
 
 import requests
 import streamlit as st
 import uvicorn
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 
 DEFAULT_API_URL = "http://127.0.0.1:8000/api/v1"
 
@@ -25,14 +31,13 @@ def _start_backend() -> tuple[str, bool, str | None]:
     port = 8000 if _port_available(host, 8000) else 8502
     base_url = f"http://{host}:{port}/api/v1"
 
-    config = uvicorn.Config(
-        "backend.app.main:app",
-        host=host,
-        port=port,
-        log_level="warning",
+    from backend.app.main import app as fastapi_app
+
+    thread = threading.Thread(
+        target=uvicorn.run,
+        kwargs={"app": fastapi_app, "host": host, "port": port, "log_level": "info"},
+        daemon=True,
     )
-    server = uvicorn.Server(config)
-    thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 
     health_url = f"{base_url}/health"
