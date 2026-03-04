@@ -6,7 +6,7 @@ from backend.app.main import app
 
 
 def test_query_response_includes_source_ids(monkeypatch) -> None:
-    def _fake_answer_question(question: str, top_k=None):
+    def _fake_answer_question(question: str, top_k=None, model=None, api_key=None):
         sources = [
             {"source_id": "doc-1:0", "label": "doc.pdf • p.1 • chunk 0 • score 0.90", "snippet": "text"},
             {"source_id": "doc-1:1", "label": "doc.pdf • p.1 • chunk 1 • score 0.80", "snippet": "more text"},
