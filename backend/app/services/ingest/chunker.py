@@ -96,3 +96,31 @@ def chunk_text(
 
     flush()
     return chunks
+
+
+def chunk_pages(
+    pages: list[str],
+    document_id: str,
+    filename: str | None = None,
+) -> list[Chunk]:
+    chunks: list[Chunk] = []
+    chunk_index = 0
+    for page_number, page_text in enumerate(pages, start=1):
+        page_chunks = chunk_text(page_text, document_id=document_id)
+        for chunk in page_chunks:
+            metadata: dict[str, str] = {
+                "document_id": document_id,
+                "page": str(page_number),
+                "chunk_index": str(chunk_index),
+            }
+            if filename:
+                metadata["filename"] = filename
+            chunks.append(
+                Chunk(
+                    id=f"{document_id}:{chunk_index}",
+                    text=chunk.text,
+                    metadata=metadata,
+                )
+            )
+            chunk_index += 1
+    return chunks

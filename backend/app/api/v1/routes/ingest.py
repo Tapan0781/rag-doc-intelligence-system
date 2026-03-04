@@ -5,15 +5,15 @@ import uuid
 
 from fastapi import APIRouter, BackgroundTasks, UploadFile
 
-from ...schemas.ingest import IngestAsyncResponse, IngestResponse, IngestStatusResponse
+from ..schemas.ingest import IngestAsyncResponse, IngestResponse, IngestStatusResponse
 from ....core.errors import AppError
 from ....core.metrics import inc
 from ....services.embed.fastembed import embed_texts
-from ....services.ingest.chunker import chunk_text
+from ....services.ingest.chunker import chunk_pages
 from ....services.ingest.document_store import save_document_metadata
 from ....services.ingest.document_store import get_document_metadata, set_document_status
 from ....services.ingest.job_runner import run_ingest_job
-from ....services.ingest.loader import load_pdf_text
+from ....services.ingest.loader import load_pdf_pages
 from ....services.retrieve.pinecone import upsert_chunks
 
 router = APIRouter()
@@ -25,17 +25,13 @@ async def ingest_pdf(file: UploadFile) -> IngestResponse:
         raise AppError("Only PDF files are supported.", status_code=415, error_code="unsupported_media_type")
     inc("ingest_requests")
     document_id = str(uuid.uuid4())
-    raw_text, file_bytes, page_count = await load_pdf_text(file)
+    pages, file_bytes, page_count = await load_pdf_pages(file)
     checksum_sha256 = hashlib.sha256(file_bytes).hexdigest()
     filename = file.filename or "document.pdf"
-    extra_metadata = {
-        "filename": filename,
-        "checksum_sha256": checksum_sha256,
-    }
-    chunks = chunk_text(
-        raw_text,
+    chunks = chunk_pages(
+        pages,
         document_id=document_id,
-        extra_metadata=extra_metadata,
+        filename=filename,
     )
     embeddings = embed_texts([c.text for c in chunks])
     upsert_chunks(chunks, embeddings)
@@ -67,7 +63,13 @@ async def ingest_pdf_async(
     file_bytes = await file.read()
     if not file_bytes:
         raise AppError("Empty file.", status_code=400, error_code="validation_error")
-    set_document_status(document_id, status="pending", filename=filename)
+    set_document_status(
+        document_id,
+        status="pending",
+        filename=filename,
+        progress_current_chunks=0,
+        progress_total_chunks=0,
+    )
     background_tasks.add_task(run_ingest_job, file_bytes, filename, document_id)
     return IngestAsyncResponse(document_id=document_id, status="pending")
 
@@ -77,4 +79,13 @@ async def ingest_status(document_id: str) -> IngestStatusResponse:
     data = get_document_metadata(document_id)
     if not data:
         raise AppError("Document not found.", status_code=404, error_code="not_found")
+    current = int(data.get("progress_current_chunks") or 0)
+    total = int(data.get("progress_total_chunks") or 0)
+    if total > 0:
+        percent = max(0, min(100, int(current / total * 100)))
+    else:
+        percent = 0
+    data["percent"] = percent
+    data["current"] = current
+    data["total"] = total
     return IngestStatusResponse(**data)

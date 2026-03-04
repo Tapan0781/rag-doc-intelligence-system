@@ -22,9 +22,11 @@ def _build_messages(
 
     developer_prompt = (
         "You are a careful assistant for a RAG system. "
-        "Answer using ONLY the provided context. "
-        "If the answer is not in the context, say you do not know. "
-        "Cite sources inline using [source_id] where source_id matches the provided context label."
+        "Answer primarily from the provided context. "
+        "If the context is incomplete, you may provide a brief general explanation but clearly mark "
+        "which part is from the document vs general knowledge. "
+        "Never respond with only 'I do not know' if any relevant context exists. "
+        "Return ONLY the answer text. Do NOT include citations, brackets, source ids, or references."
     )
 
     user_prompt = (
@@ -39,20 +41,26 @@ def _build_messages(
     ]
 
 
-def generate_answer(question: str, contexts: Iterable[Tuple[str, str]]) -> str:
-    if not settings.openai_api_key:
+def generate_answer(
+    question: str,
+    contexts: Iterable[Tuple[str, str]],
+    model: str | None = None,
+    api_key: str | None = None,
+) -> str:
+    resolved_api_key = api_key or settings.openai_api_key
+    if not resolved_api_key:
         raise AppError("OPENAI_API_KEY is not set.", status_code=500, error_code="config_error")
 
     messages = _build_messages(question, contexts)
     payload = {
-        "model": settings.llm_model,
+        "model": model or settings.llm_model,
         "messages": messages,
         "temperature": settings.llm_temperature,
         "max_tokens": settings.llm_max_output_tokens,
     }
 
     headers = {
-        "Authorization": f"Bearer {settings.openai_api_key}",
+        "Authorization": f"Bearer {resolved_api_key}",
         "Content-Type": "application/json",
     }
 

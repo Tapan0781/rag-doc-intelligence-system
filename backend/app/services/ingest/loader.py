@@ -6,18 +6,11 @@ from fastapi import UploadFile
 from pypdf import PdfReader
 
 
-def _extract_text(reader: PdfReader) -> str:
-    parts: list[str] = []
-    for page in reader.pages:
-        text = page.extract_text() or ""
-        if text:
-            parts.append(text)
-    return "\n".join(parts)
-
-
-async def load_pdf_text(file: UploadFile) -> tuple[str, bytes, int]:
+async def load_pdf_pages(file: UploadFile) -> tuple[list[str], bytes, int]:
     data = await file.read()
     reader = PdfReader(BytesIO(data))
-    text = _extract_text(reader)
+    pages: list[str] = []
+    for page in reader.pages:
+        pages.append(page.extract_text() or "")
     page_count = len(reader.pages)
-    return text, data, page_count
+    return pages, data, page_count

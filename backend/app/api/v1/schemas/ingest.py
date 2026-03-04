@@ -19,6 +19,9 @@ class IngestAsyncResponse(BaseModel):
 class IngestStatusResponse(BaseModel):
     document_id: str
     status: str
+    percent: int | None = None
+    current: int | None = None
+    total: int | None = None
     filename: str | None = None
     checksum_sha256: str | None = None
     page_count: int | None = None
