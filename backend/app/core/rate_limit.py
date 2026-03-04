@@ -26,6 +26,8 @@ def _local_allow(key: str, limit: int, window_seconds: int) -> bool:
 
 def _redis_allow(key: str, limit: int, window_seconds: int) -> bool:
     client = get_client()
+    if not client:
+        return True
     now = int(time.time())
     window_start = now - window_seconds
     pipe = client.pipeline()

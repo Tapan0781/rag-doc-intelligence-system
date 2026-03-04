@@ -6,6 +6,9 @@ from datetime import datetime, timezone
 from ...clients.redis import get_client
 
 
+_DOC_STORE: dict[str, dict] = {}
+
+
 def save_document_metadata(
     document_id: str,
     filename: str,
@@ -13,7 +16,6 @@ def save_document_metadata(
     page_count: int,
     chunk_count: int,
 ) -> None:
-    client = get_client()
     payload = {
         "document_id": document_id,
         "filename": filename,
@@ -26,16 +28,22 @@ def save_document_metadata(
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     key = f"rag:doc:{document_id}"
-    client.set(key, json.dumps(payload), ex=60 * 60 * 24 * 30)
+    client = get_client()
+    if client:
+        client.set(key, json.dumps(payload), ex=60 * 60 * 24 * 30)
+    else:
+        _DOC_STORE[key] = payload
 
 
 def get_document_metadata(document_id: str) -> dict | None:
-    client = get_client()
     key = f"rag:doc:{document_id}"
-    raw = client.get(key)
-    if not raw:
-        return None
-    return json.loads(raw.decode("utf-8"))
+    client = get_client()
+    if client:
+        raw = client.get(key)
+        if not raw:
+            return None
+        return json.loads(raw.decode("utf-8"))
+    return _DOC_STORE.get(key)
 
 
 def set_document_status(
@@ -46,7 +54,6 @@ def set_document_status(
     progress_current_chunks: int | None = None,
     progress_total_chunks: int | None = None,
 ) -> None:
-    client = get_client()
     key = f"rag:doc:{document_id}"
     payload = {
         "document_id": document_id,
@@ -57,4 +64,8 @@ def set_document_status(
         "progress_total_chunks": progress_total_chunks,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
-    client.set(key, json.dumps(payload), ex=60 * 60 * 24 * 30)
+    client = get_client()
+    if client:
+        client.set(key, json.dumps(payload), ex=60 * 60 * 24 * 30)
+    else:
+        _DOC_STORE[key] = payload

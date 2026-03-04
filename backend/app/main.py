@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 from .api.v1.routes.health import router as health_router
 from .api.v1.routes.ingest import router as ingest_router
 from .api.v1.routes.query import router as query_router
+from .clients.redis import get_client
 from .core.errors import AppError
 from .core.logging import configure_logging, log_request, request_id
 from .core.rate_limit import enforce_rate_limit
@@ -50,6 +51,10 @@ def create_app() -> FastAPI:
             status_code=500,
             content={"error": "internal_error", "message": str(exc)},
         )
+
+    @app.on_event("startup")
+    async def startup_check() -> None:
+        get_client()
 
     app.include_router(health_router, prefix="/api/v1", tags=["health"])
     app.include_router(ingest_router, prefix="/api/v1", tags=["ingest"])

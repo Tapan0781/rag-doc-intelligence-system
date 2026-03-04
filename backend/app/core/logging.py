@@ -34,6 +34,10 @@ def configure_logging() -> None:
     root.handlers = [handler]
 
 
+def get_logger() -> logging.Logger:
+    return logging.getLogger("app")
+
+
 def request_id() -> str:
     return uuid.uuid4().hex
 
