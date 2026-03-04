@@ -2,11 +2,56 @@ from __future__ import annotations
 
 import os
 
+import socket
+import threading
 import time
+
 import requests
 import streamlit as st
+import uvicorn
 
-API_URL = os.getenv("API_URL", "http://localhost:8000/api/v1")
+DEFAULT_API_URL = "http://127.0.0.1:8000/api/v1"
+
+
+def _port_available(host: str, port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(0.2)
+        return sock.connect_ex((host, port)) != 0
+
+
+@st.cache_resource
+def _start_backend() -> tuple[str, bool, str | None]:
+    host = "127.0.0.1"
+    port = 8000 if _port_available(host, 8000) else 8502
+    base_url = f"http://{host}:{port}/api/v1"
+
+    config = uvicorn.Config(
+        "backend.app.main:app",
+        host=host,
+        port=port,
+        log_level="warning",
+    )
+    server = uvicorn.Server(config)
+    thread = threading.Thread(target=server.run, daemon=True)
+    thread.start()
+
+    health_url = f"{base_url}/health"
+    deadline = time.time() + 30
+    last_error: str | None = None
+    while time.time() < deadline:
+        try:
+            resp = requests.get(health_url, timeout=2)
+            if resp.status_code == 200:
+                return base_url, True, None
+        except Exception as exc:
+            last_error = str(exc)
+        time.sleep(0.5)
+    return base_url, False, last_error or "Backend did not become ready."
+
+
+API_URL, backend_ok, backend_error = _start_backend()
+if not backend_ok:
+    st.error(f"FastAPI backend failed to start: {backend_error}")
 
 st.set_page_config(page_title="RAG Doc Intelligence", page_icon="🧠", layout="wide")
 
