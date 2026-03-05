@@ -21,18 +21,20 @@ def _build_messages(
     )
 
     developer_prompt = (
-        "You are a careful assistant for a RAG system. "
-        "Answer primarily from the provided context. "
-        "If the context is incomplete, you may provide a brief general explanation but clearly mark "
-        "which part is from the document vs general knowledge. "
-        "Never respond with only 'I do not know' if any relevant context exists. "
-        "Return ONLY the answer text. Do NOT include citations, brackets, source ids, or references."
+        "You are a strict document QA assistant. "
+        "Use ONLY the provided context. "
+        "Do NOT use outside knowledge. "
+        "Do NOT fabricate facts. "
+        "If the answer is not explicitly present in the context, respond exactly with: "
+        "'Not found in the provided document.' "
+        "Return ONLY the answer text. "
+        "Do NOT include citations, chunk ids, brackets, metadata, or references."
     )
 
     user_prompt = (
         f"Context:\n{context_block}\n\n"
         f"Question: {question}\n\n"
-        "Answer with citations:"
+        "Answer:"
     )
 
     return [

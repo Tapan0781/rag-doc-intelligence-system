@@ -26,7 +26,7 @@ def upsert_chunks(chunks: list[Chunk], embeddings) -> None:
 
 def query_similar(text: str, top_k: int | None = None) -> list[dict]:
     index = get_index()
-    top_k = top_k or settings.max_query_results
+    top_k = top_k or settings.top_k_dense
     vector = _to_float_list(embed_texts([text])[0])
 
     results = index.query(

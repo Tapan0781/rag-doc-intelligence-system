@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+import asyncio
 
-from backend.app.main import app
+from backend.app.api.v1.routes.query import query_rag
+from backend.app.api.v1.schemas.query import QueryRequest
+from backend.app.services.rag.pipeline import answer_question
 
 
 def test_query_response_includes_source_ids(monkeypatch) -> None:
@@ -18,10 +20,24 @@ def test_query_response_includes_source_ids(monkeypatch) -> None:
         _fake_answer_question,
     )
 
-    client = TestClient(app)
-    response = client.post("/api/v1/query", json={"question": "What is Amazon S3 used for?"})
-    assert response.status_code == 200
-    payload = response.json()
+    response = asyncio.run(query_rag(QueryRequest(question="What is Amazon S3 used for?")))
+    payload = response.model_dump()
     assert payload["answer"] == "answer"
     assert payload["source_ids"] == ["doc-1:0", "doc-1:1"]
     assert len(payload["sources"]) == 2
+    assert set(payload.keys()) == {"answer", "sources", "source_ids", "debug"}
+
+
+def test_low_retrieval_score_returns_not_found(monkeypatch) -> None:
+    monkeypatch.setattr("backend.app.services.rag.pipeline.get_cache", lambda *_: None)
+    monkeypatch.setattr("backend.app.services.rag.pipeline.set_cache", lambda *_, **__: None)
+    monkeypatch.setattr(
+        "backend.app.services.rag.pipeline.query_similar",
+        lambda *_args, **_kwargs: [{"id": "doc-1:0", "score": 0.05, "text": "irrelevant"}],
+    )
+
+    answer, sources, source_ids, debug = answer_question("What is the SLA?")
+    assert answer == "Not found in the provided document."
+    assert sources == []
+    assert source_ids == []
+    assert debug is None

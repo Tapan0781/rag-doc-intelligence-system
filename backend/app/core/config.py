@@ -43,9 +43,18 @@ class AppSettings(BaseSettings):
     chunk_overlap: int = 120
 
     # Retrieval
-    max_query_results: int = 5
-    rag_min_score: float = 0.25
+    max_query_results: int = 20
+    rag_min_score: float | None = None
     rag_debug: bool = False
+    rerank_enabled: bool = True
+    top_k_dense: int = 20
+    top_k_final: int = 6
+    min_retrieval_score: float = 0.3
+
+    @property
+    def retrieval_score_threshold(self) -> float:
+        # Backward-compatible support for legacy RAG_MIN_SCORE.
+        return self.rag_min_score if self.rag_min_score is not None else self.min_retrieval_score
 
 
 class Chunk(BaseModel):
